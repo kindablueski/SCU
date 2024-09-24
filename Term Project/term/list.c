@@ -1,0 +1,218 @@
+//
+//	Xavier Zacklin's Term Project 2024 SPRING QUARTER
+//	TUESDAY 9:15 SECTION
+//	
+#include <stdio.h>
+#include <stdlib.h>
+#include <assert.h>
+#include <stdbool.h>
+#include "list.h"
+
+// Define the node structure
+typedef struct node {
+	
+	struct node *next; // link to next node
+	struct node *prev; // link to previous node
+	int length; // max capacity of node
+	int count; // how many items are in the node
+	int first; // index of first element 
+        void **data; // array of data
+} NODE;
+
+// Define the list structure
+typedef struct list {
+	NODE *head; // pointer to head node
+        NODE *tail; // pointer to tail node
+	int nodeCount; //total number of nodes in list
+	int itemCount; // total number of items in ilst
+} LIST;
+
+//Time Complexity O(1) - Function to create a new list
+LIST *createList(void) {
+	
+	//allocates memory for the lsit
+	LIST *lp = malloc(sizeof(LIST));
+	assert(lp != NULL);
+	lp->nodeCount = 0;
+	lp->itemCount = 0;
+	
+	//creates initial node and sets it as head and tail 
+	lp->head = malloc(sizeof(NODE));
+	assert(lp->head != NULL);
+	lp->tail = lp->head;
+	lp->head->next = NULL;
+	lp->head->prev = NULL;
+	return lp;
+}
+
+//Time Complexity O(n) Function to destroy a list and free its memory
+void destroyList(LIST *lp) {
+
+	assert(lp != NULL);
+	NODE *current = lp->head;
+ 
+   	//traverses through each node and frees the memory
+	while (current != NULL) {
+        	NODE *nextNode = current->next;
+        	free(current->data);
+        	free(current);
+        	current = nextNode;
+    	}
+    	free(lp);
+}
+
+// Time Complexity O(1) - Function to return the number of items in the list
+int numItems(LIST *lp) {
+   	assert(lp != NULL);
+ 	return lp->itemCount;
+}
+
+//Time Complexity O(1) -  Function to add an item to the front of the list
+void addFirst(LIST *lp, void *item) {
+	//makes sure the lsit and item pointers are not null
+	assert(lp != NULL && item != NULL);
+	
+	//checks if a new node is necessary
+	if (lp->nodeCount == 0 || lp->head->count == lp->head->length) {
+		//allocates memory and initializes new node
+		NODE *newHead = malloc(sizeof(NODE));
+        	assert(newHead != NULL);
+        	newHead->first = 0;
+        	newHead->length = 8;
+        	newHead->count = 0;
+        	newHead->data = malloc(sizeof(void*) * newHead->length);
+        	assert(newHead->data != NULL);
+        	//links new node to the list
+		newHead->prev = NULL;
+        	newHead->next = lp->head;
+        	//checks if list has nodes or a new head/tail is needed
+		if (lp->nodeCount == 0) {
+                	lp->head = newHead;
+                	lp->tail = newHead;
+        	} else {
+                	lp->head->prev = newHead;
+                	lp->head = newHead;
+        	}
+        	lp->nodeCount++;
+	}
+	//adds the item to the head node
+    	int idx = (lp->head->first + lp->head->count) % lp->head->length;
+    	lp->head->data[idx] = item;
+    	lp->head->count++;
+    	lp->itemCount++;
+}
+
+//Time complexity O(1) Function to add an item to the end of the list
+void addLast(LIST *lp, void *item) {
+	
+	//makes sure the list and item pointers are not null
+	assert(lp != NULL && item != NULL);
+	//checks if a new node is necessary
+	if (lp->nodeCount == 0 || lp->tail->count == lp->tail->length) {
+        	NODE *newTail = malloc(sizeof(NODE));
+        	assert(newTail != NULL);
+        	newTail->length = 8;
+        	newTail->first = 0;
+        	newTail->count = 0;
+        	newTail->data = malloc(sizeof(void*) * newTail->length);
+        	assert(newTail->data != NULL);
+        //links new node to the lsit
+		newTail->next = NULL;
+        	newTail->prev = lp->tail;
+        	if (lp->nodeCount == 0) {
+			lp->head = newTail;
+			lp->tail = newTail;
+        	} else {
+            		lp->tail->next = newTail;
+                	lp->tail = newTail;
+        	}
+        	lp->nodeCount++;
+        }
+    	// adds the item to the tail node
+	int idx = (lp->tail->first + lp->tail->count) % lp->tail->length;
+    	lp->tail->data[idx] = item;
+    	lp->tail->count++;
+    	lp->itemCount++;
+}
+
+//Time Complexity O(1) -  Function to remove and return the first item from the list
+void *removeFirst(LIST *lp) {
+	
+//	 makes sure the pointer points to something and there are items to remove 
+	assert(lp != NULL && lp->itemCount > 0);
+	
+	//remove the item from the head node
+	void *item = lp->head->data[lp->head->first];
+	lp->head->data[lp->head->first] = NULL;
+	lp->head->first = (lp->head->first + 1) % lp->head->length;
+	lp->head->count--;
+	lp->itemCount--;
+
+	//checks if the head node is empty and there is a nexxt node
+	if (lp->head->count == 0 && lp->head->next != NULL) {
+        	NODE *oldHead = lp->head;
+        	lp->head = lp->head->next;
+        	lp->head->prev = NULL;
+        	free(oldHead->data);
+        	free(oldHead);
+        	lp->nodeCount--;
+    	}
+    	return item;
+}
+
+// Time Complexity O(1) - Function to remove and return the last item from the list
+void *removeLast(LIST *lp) {
+
+	//makes sure the pointer is not null and there are items available
+	assert(lp != NULL && lp->itemCount > 0);
+	
+	//calculate the index of the last item
+	int idx = (lp->tail->first + lp->tail->count - 1) % lp->tail->length;
+	void *item = lp->tail->data[idx];
+	lp->tail->data[idx] = NULL;
+	lp->tail->count--;
+	lp->itemCount--;
+
+	//makes sure tail is empty and a previous node exists
+	if (lp->tail->count == 0 && lp->tail->prev != NULL) {
+        	NODE *oldTail = lp->tail;
+        	lp->tail = lp->tail->prev;
+        	lp->tail->next = NULL;
+        	//frees data in the array of the old node and frees the tail
+		free(oldTail->data);
+        	free(oldTail);
+        	lp->nodeCount--;
+    	}
+    	return item;
+}
+
+//Time Complexity : O(n)- Function to get an item from the list at a specific index
+void *getItem(LIST *lp, int index) {
+	//makes sure the pointers are not null and the index fits in range
+	assert(lp != NULL && index >= 0 && index < lp->itemCount);
+ 	
+	//traverses the list to find the node contianing the item
+	NODE *current = lp->head;
+    	while (index >= current->count) {
+        	index -= current->count;
+        	current = current->next;
+    	}
+	//returns the item found in the node
+    	return current->data[(current->first + index) % current->length];
+}
+
+// Time Complexity : O(n) - sets an item into the list at a specific index
+void setItem(LIST *lp, int index, void *item) {
+	//makes sure the pointers are not null and the index fits in range
+	assert(lp != NULL && item != NULL && index >= 0 && index < lp->itemCount);
+   	
+	// traverses the list to fnd a node containing the item
+	NODE *current = lp->head;
+	while (index >= current->count) {
+        	index -= current->count;
+        	current = current->next;
+   	}
+	
+	//sets the found item into a node	
+  	current->data[(current->first + index) % current->length] = item;
+}
